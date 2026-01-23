@@ -125,6 +125,7 @@ export interface SurveyDetailDto {
   consentText?: string | null;
   outroText?: string | null;
   accessType: AccessType;
+  isPublished: boolean;
   startDate: Date | null;
   endDate: Date | null;
   questions: QuestionDto[];

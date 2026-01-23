@@ -64,12 +64,14 @@ export default function ParticipatePage() {
     const currentQuestion = survey.questions[currentQuestionIndex];
     const answer = answers[currentQuestion.id];
 
+    // Check if answer is provided for required questions
     if (currentQuestion.isRequired && !answer) {
       alert('Bu soru zorunludur. Lütfen cevap verin.');
       return;
     }
 
-    if (currentQuestion.type === 'FileUpload' && !answer) {
+    // FileUpload validation - only required if question is mandatory
+    if (currentQuestion.type === 'FileUpload' && currentQuestion.isRequired && !answer) {
       alert('Lütfen bir dosya yükleyin.');
       return;
     }
@@ -86,8 +88,8 @@ export default function ParticipatePage() {
         return;
       }
 
-      // Check for required explanations when score is 1-2
-      if (currentQuestion.matrixShowExplanation) {
+      // Check for required explanations when score is 1-2 (only for answered options)
+      if (currentQuestion.matrixShowExplanation && answeredOptions.length > 0) {
         for (const option of currentQuestion.options) {
           const optAnswer = matrixAnswer[option.id];
           if (optAnswer?.scaleValue && optAnswer.scaleValue <= 2 && !optAnswer.explanation?.trim()) {
@@ -111,6 +113,30 @@ export default function ParticipatePage() {
       }
     }
 
+    // Determine if the user actually provided an answer
+    const hasAnswer = (() => {
+      if (!answer) return false;
+      if (currentQuestion.type === 'OpenText') return typeof answer === 'string' && answer.trim().length > 0;
+      if (currentQuestion.type === 'SingleSelect' || currentQuestion.type === 'Conditional') return !!answer;
+      if (currentQuestion.type === 'MultiSelect') return Array.isArray(answer) && answer.length > 0;
+      if (currentQuestion.type === 'FileUpload') return !!answer?.base64Content;
+      if (currentQuestion.type === 'Matrix') {
+        const entries = Object.entries(answer || {});
+        return entries.some(([_, data]: [string, any]) => data?.scaleValue);
+      }
+      return false;
+    })();
+
+    // If no answer and question is not required, skip to next question without submitting
+    if (!hasAnswer && !currentQuestion.isRequired) {
+      if (currentQuestionIndex < survey.questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+      } else {
+        await handleComplete();
+      }
+      return;
+    }
+
     let textValue = null;
     let optionIds: number[] = [];
     let attachment = null;
@@ -130,11 +156,13 @@ export default function ParticipatePage() {
       } : null;
     } else if (currentQuestion.type === 'Matrix') {
       // Convert matrix answer object to array format for API
-      matrixAnswers = Object.entries(answer || {}).map(([optionId, data]: [string, any]) => ({
-        optionId: parseInt(optionId),
-        scaleValue: data.scaleValue,
-        explanation: data.explanation || null,
-      }));
+      matrixAnswers = Object.entries(answer || {})
+        .filter(([_, data]: [string, any]) => data?.scaleValue) // Only include answered items
+        .map(([optionId, data]: [string, any]) => ({
+          optionId: parseInt(optionId),
+          scaleValue: data.scaleValue,
+          explanation: data.explanation || null,
+        }));
     }
 
     try {
@@ -860,17 +888,17 @@ export default function ParticipatePage() {
             {currentQuestion.type === 'Matrix' && (
               <div className="space-y-4">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full text-sm border-collapse table-fixed">
                     <thead>
                       <tr className="bg-slate-50">
-                        <th className="border p-3 text-left min-w-[200px]"></th>
+                        <th className="border p-3 text-left w-[180px]"></th>
                         {(currentQuestion.matrixScaleLabels || []).map((label, i) => (
-                          <th key={i} className="border p-2 text-center min-w-[80px] text-xs font-medium">
+                          <th key={i} className="border p-2 text-center w-[70px] text-xs font-medium">
                             {label}
                           </th>
                         ))}
                         {currentQuestion.matrixShowExplanation && (
-                          <th className="border p-2 text-center min-w-[200px] text-xs font-medium">
+                          <th className="border p-2 text-center min-w-[280px] text-xs font-medium">
                             {currentQuestion.matrixExplanationLabel || 'Açıklama'}
                           </th>
                         )}
@@ -917,7 +945,7 @@ export default function ParticipatePage() {
                               </td>
                             ))}
                             {currentQuestion.matrixShowExplanation && (
-                              <td className="border p-2">
+                              <td className="border p-2 min-w-[280px]">
                                 {showExplanation ? (
                                   <textarea
                                     value={matrixAnswer.explanation || ''}
@@ -933,7 +961,7 @@ export default function ParticipatePage() {
                                     }}
                                     placeholder="Lütfen açıklayınız..."
                                     rows={2}
-                                    className="w-full text-sm border rounded p-2 resize-none"
+                                    className="w-full min-w-[250px] text-sm border rounded p-2 resize-none"
                                     maxLength={500}
                                   />
                                 ) : (

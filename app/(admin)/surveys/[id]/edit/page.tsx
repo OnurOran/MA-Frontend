@@ -24,16 +24,7 @@ export default function EditSurveyPage() {
     }
   }, [survey]);
 
-  const isDraft = useMemo(() => {
-    if (!survey) return true;
-    return !survey.startDate && !survey.endDate;
-  }, [survey]);
-
-  useEffect(() => {
-    if (survey && !isDraft) {
-      router.replace(`/surveys/${surveyId}`);
-    }
-  }, [survey, isDraft, router, surveyId]);
+  const isPublished = survey?.isPublished ?? false;
 
   const updateField = (field: keyof SurveyFormData, value: any) => {
     setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
@@ -156,7 +147,11 @@ export default function EditSurveyPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Anketi Düzenle</h1>
-          <p className="text-slate-600 mt-1">Yalnızca yayınlanmamış anketler düzenlenebilir</p>
+          <p className="text-slate-600 mt-1">
+            {isPublished
+              ? 'Yayınlanmış anket - Sadece metin ve zorunluluk değişiklikleri yapılabilir'
+              : 'Anket bilgilerini ve sorularını düzenleyin'}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -167,6 +162,32 @@ export default function EditSurveyPage() {
           </Button>
         </div>
       </div>
+
+      {/* Warning for published surveys */}
+      {isPublished && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <h3 className="font-semibold text-amber-800">Yayınlanmış Anket</h3>
+              <p className="text-sm text-amber-700 mt-1">
+                Bu anket yayınlanmış durumda. Veri bütünlüğünü korumak için sadece aşağıdaki değişiklikler yapılabilir:
+              </p>
+              <ul className="text-sm text-amber-700 mt-2 list-disc list-inside">
+                <li>Anket başlığı, açıklaması ve diğer metinler</li>
+                <li>Soru metinleri ve açıklamaları</li>
+                <li>Seçenek metinleri</li>
+                <li>Soruların zorunlu/opsiyonel durumu</li>
+              </ul>
+              <p className="text-sm text-amber-700 mt-2 font-medium">
+                Soru ekleme/silme, seçenek ekleme/silme veya soru tipi değişikliği yapılamaz.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {}
       <SurveyBasicInfo

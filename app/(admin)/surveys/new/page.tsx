@@ -114,13 +114,8 @@ export default function NewSurveyPage() {
     };
 
     try {
-      const surveyId = await createSurvey.mutateAsync(request);
-
-      if (surveyId) {
-        router.push(`/surveys/${surveyId}`);
-      } else {
-        router.push('/surveys');
-      }
+      await createSurvey.mutateAsync(request);
+      router.push('/surveys');
     } catch (error) {
 
     }

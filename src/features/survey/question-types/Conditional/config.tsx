@@ -35,6 +35,48 @@ export const conditionalConfig: QuestionTypeConfig = {
       }
     });
 
+    // Validate child questions (stored at question level with parentOptionOrder)
+    if (question.childQuestions && question.childQuestions.length > 0) {
+      question.childQuestions.forEach((childQuestion, childIndex) => {
+        const parentOptionIndex = question.options.findIndex(opt => opt.order === childQuestion.parentOptionOrder);
+        const optionLabel = parentOptionIndex >= 0 ? `Seçenek ${parentOptionIndex + 1}` : `Seçenek`;
+
+        if (!childQuestion.text.trim()) {
+          errors.push({
+            field: `childQuestions[${childIndex}].text`,
+            message: `${optionLabel} - Alt soru metni gereklidir`
+          });
+        }
+
+        // Child questions cannot be Conditional type
+        if (childQuestion.type === 'Conditional') {
+          errors.push({
+            field: `childQuestions[${childIndex}].type`,
+            message: `Alt sorular Koşullu tip olamaz`
+          });
+        }
+
+        // Validate child question options for SingleSelect/MultiSelect types
+        if (childQuestion.type === 'SingleSelect' || childQuestion.type === 'MultiSelect') {
+          if (!childQuestion.options || childQuestion.options.length < 2) {
+            errors.push({
+              field: `childQuestions[${childIndex}].options`,
+              message: `${optionLabel} - Alt soru en az 2 seçenek içermelidir`
+            });
+          } else {
+            childQuestion.options.forEach((childOption, childOptIndex) => {
+              if (!childOption.text.trim()) {
+                errors.push({
+                  field: `childQuestions[${childIndex}].options[${childOptIndex}].text`,
+                  message: `${optionLabel} - Alt soru - Seçenek ${childOptIndex + 1} metni gereklidir`
+                });
+              }
+            });
+          }
+        }
+      });
+    }
+
     return errors;
   },
 };

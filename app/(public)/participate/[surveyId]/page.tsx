@@ -67,12 +67,14 @@ export default function ParticipatePage() {
     const currentQuestion = survey.questions[currentQuestionIndex];
     const answer = answers[currentQuestion.id];
 
+    // Check if answer is provided for required questions
     if (currentQuestion.isRequired && !answer) {
       alert('Bu soru zorunludur. Lütfen cevap verin.');
       return;
     }
 
-    if (currentQuestion.type === 'FileUpload' && !answer) {
+    // FileUpload validation - only required if question is mandatory
+    if (currentQuestion.type === 'FileUpload' && currentQuestion.isRequired && !answer) {
       alert('Lütfen bir dosya yükleyin.');
       return;
     }
@@ -88,6 +90,26 @@ export default function ParticipatePage() {
           }
         }
       }
+    }
+
+    // Determine if the user actually provided an answer
+    const hasAnswer = (() => {
+      if (!answer) return false;
+      if (currentQuestion.type === 'OpenText') return typeof answer === 'string' && answer.trim().length > 0;
+      if (currentQuestion.type === 'SingleSelect' || currentQuestion.type === 'Conditional') return !!answer;
+      if (currentQuestion.type === 'MultiSelect') return Array.isArray(answer) && answer.length > 0;
+      if (currentQuestion.type === 'FileUpload') return !!answer?.base64Content;
+      return false;
+    })();
+
+    // If no answer and question is not required, skip to next question without submitting
+    if (!hasAnswer && !currentQuestion.isRequired) {
+      if (currentQuestionIndex < survey.questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+      } else {
+        await handleComplete();
+      }
+      return;
     }
 
     let textValue = null;

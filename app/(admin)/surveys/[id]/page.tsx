@@ -161,12 +161,10 @@ export default function SurveyDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
-          {isDraft && (
-            <Button variant="outline" onClick={() => router.push(`/surveys/${surveyId}/edit`)}>
-              Düzenle
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => router.push('/admin/surveys')}>
+          <Button variant="outline" onClick={() => router.push(`/surveys/${surveyId}/edit`)}>
+            {isDraft ? 'Düzenle' : 'Metinleri Düzenle'}
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/surveys')}>
             Geri
           </Button>
           {isDraft && (
