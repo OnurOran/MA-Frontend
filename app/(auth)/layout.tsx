@@ -67,7 +67,7 @@ export default function AuthLayout({
 
         <div className="relative z-10">
           <p className="text-white/50 text-sm">
-            © 2024 Metro İstanbul. Tüm hakları saklıdır.
+            © 2026 Metro İstanbul. Tüm hakları saklıdır.
           </p>
         </div>
       </div>

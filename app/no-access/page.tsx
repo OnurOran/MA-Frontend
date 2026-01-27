@@ -117,7 +117,7 @@ export default function NoAccessPage() {
 
               {}
               <p className="text-xs text-slate-500 pt-2">
-                Yardım için: admin@metroistanbul.com
+                Yardım için: destekbt@metro.istanbul
               </p>
             </div>
           </CardContent>

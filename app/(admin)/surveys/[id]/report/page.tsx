@@ -17,6 +17,15 @@ import { cn } from '@/src/lib/utils';
 
 const COLORS = ['#0055a5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+const QUESTION_TYPE_LABELS: Record<string, string> = {
+  SingleSelect: 'Tekli Seçim',
+  MultiSelect: 'Çoklu Seçim',
+  OpenText: 'Açık Metin',
+  FileUpload: 'Dosya Yükleme',
+  Conditional: 'Koşullu',
+  Matrix: 'Matris',
+};
+
 function AuthenticatedImage({ attachmentId, fileName, className }: { attachmentId: number; fileName: string; className?: string }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -95,6 +104,7 @@ export default function SurveyReportPage() {
   const [selectedParticipantName, setSelectedParticipantName] = useState<string>('');
   const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantId || 0);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [forceExpandAll, setForceExpandAll] = useState(false);
 
@@ -159,10 +169,7 @@ export default function SurveyReportPage() {
     setForceExpandAll(true);
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    const styleOverride = document.createElement('style');
-    styleOverride.id = 'pdf-color-override';
-    styleOverride.textContent = `
-
+    const pdfStyleOverrideCSS = `
       * {
         color: inherit !important;
         background-color: transparent !important;
@@ -225,11 +232,7 @@ export default function SurveyReportPage() {
       });
 
       await Promise.all(imagePromises);
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      document.head.appendChild(styleOverride);
-
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -258,6 +261,11 @@ export default function SurveyReportPage() {
           allowTaint: true,
           imageTimeout: 0,
           backgroundColor: '#ffffff',
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            style.textContent = pdfStyleOverrideCSS;
+            clonedDoc.head.appendChild(style);
+          },
         });
 
         const imgWidth = pageWidth - 2 * margin;
@@ -304,20 +312,39 @@ export default function SurveyReportPage() {
       }
 
       const filename = selectedParticipantId
-        ? `${report.title}_${selectedParticipantName}_Rapor.pdf`
-        : `${report.title}_Rapor.pdf`;
+        ? `${report.title}_${selectedParticipantName}.pdf`
+        : `${report.title}.pdf`;
       pdf.save(filename);
     } catch (err) {
       console.error('PDF export error:', err);
       alert('PDF oluşturulurken bir hata oluştu: ' + (err as Error).message);
     } finally {
-
-      const styleEl = document.getElementById('pdf-color-override');
-      if (styleEl) {
-        styleEl.remove();
-      }
       setForceExpandAll(false);
       setExportingPDF(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (!report) return;
+    setExportingExcel(true);
+    try {
+      const response = await apiClient.get(`/surveys/${surveyId}/report/excel`, {
+        params: { includePartial: includePartialResponses },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${report.title}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Excel export error:', err);
+      alert('Excel dosyası oluşturulurken bir hata oluştu');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -348,23 +375,35 @@ export default function SurveyReportPage() {
     <div className="min-h-screen bg-slate-50">
       {}
       <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="container mx-auto px-6 py-4 w-full">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-6 py-4 w-full space-y-3">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => router.back()}>
+              ← Geri Dön
+            </Button>
+          </div>
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <Button variant="outline" onClick={() => router.back()} className="mb-2">
-                ← Geri Dön
-              </Button>
               <h1 className="text-3xl font-bold text-slate-800">{report.title}</h1>
               <p className="text-slate-600 mt-1">{report.description}</p>
             </div>
-            <Button
-              onClick={handleExportPDF}
-              disabled={exportingPDF}
-              style={{ backgroundColor: '#0055a5' }}
-              className="hover:opacity-90"
-            >
-              {exportingPDF ? 'PDF Oluşturuluyor...' : 'PDF İndir'}
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                onClick={handleExportExcel}
+                disabled={exportingExcel}
+                variant="outline"
+                className="border-green-600 text-green-700 hover:bg-green-50"
+              >
+                {exportingExcel ? 'Excel Oluşturuluyor...' : 'Excel İndir'}
+              </Button>
+              <Button
+                onClick={handleExportPDF}
+                disabled={exportingPDF}
+                style={{ backgroundColor: '#0055a5' }}
+                className="hover:opacity-90"
+              >
+                {exportingPDF ? 'PDF Oluşturuluyor...' : 'PDF İndir'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -374,35 +413,64 @@ export default function SurveyReportPage() {
           {}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-pdf-block>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Toplam Katılım</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{report.totalParticipations}</div>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-500">Toplam Katılım</div>
+                    <div className="text-2xl font-bold text-slate-900">{report.totalParticipations}</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Tamamlanan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600">{report.completedParticipations}</div>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-500">Tamamlanan</div>
+                    <div className="text-2xl font-bold text-green-600">{report.completedParticipations}</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Tamamlanma Oranı</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-600">{report.completionRate.toFixed(1)}%</div>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-500">Tamamlanma Oranı</div>
+                    <div className="text-2xl font-bold text-blue-600">{report.completionRate.toFixed(1)}%</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Soru Sayısı</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{report.questions.length}</div>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-500">Soru Sayısı</div>
+                    <div className="text-2xl font-bold text-purple-600">{report.questions.length}</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -668,15 +736,6 @@ function QuestionResultCard({
 
   const participantAnswer = participantResponse?.answers.find(a => a.questionId === question.questionId);
 
-  if (participantResponse && participantAnswer) {
-    console.log('Question:', question.questionId, question.text);
-    console.log('Participant Answer:', participantAnswer);
-    console.log('Has fileName:', !!participantAnswer.fileName);
-    console.log('Has answerId:', !!participantAnswer.answerId);
-    console.log('Has textValue:', !!participantAnswer.textValue);
-    console.log('selectedOptions length:', participantAnswer.selectedOptions?.length);
-  }
-
   const renderQuestionContent = () => {
 
     if (participantResponse) {
@@ -723,11 +782,21 @@ function QuestionResultCard({
             <CardTitle className="text-lg">
               S{index + 1}: {question.text}
             </CardTitle>
-            <div className="flex gap-4 mt-2 text-sm text-slate-600">
-              <span>Tip: {question.type}</span>
-              <span>Yanıt: {question.totalResponses}</span>
-              <span>Oran: {question.responseRate.toFixed(1)}%</span>
-              {question.isRequired && <span className="text-red-600">*Zorunlu</span>}
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                {QUESTION_TYPE_LABELS[question.type] || question.type}
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                {question.totalResponses} yanıt
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                %{question.responseRate.toFixed(1)} oran
+              </span>
+              {question.isRequired && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                  Zorunlu
+                </span>
+              )}
             </div>
             {}
             {question.attachment && (
@@ -780,7 +849,7 @@ function QuestionResultCard({
       </CardHeader>
       <CardContent>
         {isCollapsed ? (
-          <div className="text-sm text-slate-500">Bu soru daraltıldı.</div>
+          <div className="text-sm text-slate-400 italic text-center py-2">İçeriği görmek için genişletin</div>
         ) : (
           <>
             {renderQuestionContent()}
@@ -1241,17 +1310,6 @@ function MatrixView({ question }: { question: QuestionReportDto }) {
         </div>
       </div>
 
-      {/* Scale Legend */}
-      <div className="bg-slate-50 p-3 rounded-md">
-        <div className="text-xs font-semibold text-slate-700 mb-2">Ölçek Açıklaması</div>
-        <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-          {scaleLabels.map((label, i) => (
-            <span key={i}>
-              <span className="font-medium">{i + 1}:</span> {label}
-            </span>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

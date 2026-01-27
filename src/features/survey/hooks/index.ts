@@ -2,6 +2,7 @@ export { useSurveys } from './useSurveys';
 export { useSurvey } from './useSurvey';
 export { useSurveyBySlug } from './useSurveyBySlug';
 export { useCreateSurvey } from './useCreateSurvey';
+export { useDeleteSurvey } from './useDeleteSurvey';
 export { useDuplicateSurvey } from './useDuplicateSurvey';
 export { useAddQuestion } from './useAddQuestion';
 export { usePublishSurvey } from './usePublishSurvey';

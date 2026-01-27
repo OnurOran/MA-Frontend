@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import { Textarea } from '@/src/components/ui/textarea';
+import { Button } from '@/src/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
 import { AttachmentUpload } from '../AttachmentUpload';
 import { AttachmentData } from '../../question-types/types';
+import { TextTemplateSelectModal } from '@/src/features/textTemplate/components/TextTemplateSelectModal';
+import { TextTemplateType } from '@/src/types';
 
 interface SurveyBasicInfoProps {
   title: string;
@@ -39,13 +43,24 @@ export function SurveyBasicInfo({
   onAccessTypeChange,
   onAttachmentChange,
 }: SurveyBasicInfoProps) {
+  const [templateModalType, setTemplateModalType] = useState<TextTemplateType | null>(null);
+
+  const handleTemplateSelect = (content: string) => {
+    if (templateModalType === 'Intro') {
+      onIntroTextChange?.(content);
+    } else if (templateModalType === 'Consent') {
+      onConsentTextChange?.(content);
+    } else if (templateModalType === 'Outro') {
+      onOutroTextChange?.(content);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Temel Bilgiler</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {}
         <div>
           <Label htmlFor="title">Anket Başlığı *</Label>
           <Input
@@ -57,7 +72,6 @@ export function SurveyBasicInfo({
           />
         </div>
 
-        {}
         <div>
           <Label htmlFor="description">Açıklama *</Label>
           <Textarea
@@ -70,9 +84,18 @@ export function SurveyBasicInfo({
           />
         </div>
 
-        {}
         <div>
-          <Label htmlFor="introText">Giriş Metni (Opsiyonel)</Label>
+          <div className="flex items-center justify-between mb-1">
+            <Label htmlFor="introText">Giriş Metni (Opsiyonel)</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setTemplateModalType('Intro')}
+            >
+              Mevcut Metinlerden Seç
+            </Button>
+          </div>
           <p className="text-sm text-slate-500 mb-2">
             Ankete başlamadan önce gösterilecek açıklama metni (örn: yasal bilgilendirme, KVKK metni)
           </p>
@@ -85,9 +108,18 @@ export function SurveyBasicInfo({
           />
         </div>
 
-        {}
         <div>
-          <Label htmlFor="consentText">Onay Metni (Opsiyonel)</Label>
+          <div className="flex items-center justify-between mb-1">
+            <Label htmlFor="consentText">Onay Metni (Opsiyonel)</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setTemplateModalType('Consent')}
+            >
+              Mevcut Metinlerden Seç
+            </Button>
+          </div>
           <p className="text-sm text-slate-500 mb-2">
             Katılımcıların onaylaması gereken metin. Bu alan doldurulursa katılımcılar ankete başlamadan önce onay vermek zorundadır.
           </p>
@@ -100,9 +132,18 @@ export function SurveyBasicInfo({
           />
         </div>
 
-        {}
         <div>
-          <Label htmlFor="outroText">Teşekkür Metni (Opsiyonel)</Label>
+          <div className="flex items-center justify-between mb-1">
+            <Label htmlFor="outroText">Teşekkür Metni (Opsiyonel)</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setTemplateModalType('Outro')}
+            >
+              Mevcut Metinlerden Seç
+            </Button>
+          </div>
           <p className="text-sm text-slate-500 mb-2">
             Anket tamamlandığında gösterilecek teşekkür mesajı
           </p>
@@ -115,7 +156,6 @@ export function SurveyBasicInfo({
           />
         </div>
 
-        {}
         <div>
           <Label htmlFor="accessType">Erişim Tipi *</Label>
           <Select value={accessType} onValueChange={onAccessTypeChange}>
@@ -129,7 +169,6 @@ export function SurveyBasicInfo({
           </Select>
         </div>
 
-        {}
         <div>
           <Label>Anket Eki (Opsiyonel)</Label>
           <p className="text-sm text-slate-500 mb-2">
@@ -142,6 +181,17 @@ export function SurveyBasicInfo({
           />
         </div>
       </CardContent>
+
+      {templateModalType && (
+        <TextTemplateSelectModal
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setTemplateModalType(null);
+          }}
+          type={templateModalType}
+          onSelect={handleTemplateSelect}
+        />
+      )}
     </Card>
   );
 }

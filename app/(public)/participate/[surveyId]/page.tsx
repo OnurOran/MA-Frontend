@@ -704,6 +704,104 @@ export default function ParticipatePage() {
                                 </div>
                               </div>
                             )}
+
+                            {}
+                            {childQuestion.type === 'FileUpload' && (
+                              <div className="space-y-3">
+                                {childQuestion.allowedAttachmentContentTypes && childQuestion.allowedAttachmentContentTypes.length > 0 && (
+                                  <div className="text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <span className="font-medium">İzin verilen dosya türleri:</span>
+                                    <div className="mt-1">
+                                      {childQuestion.allowedAttachmentContentTypes.map((type: string, idx: number) => (
+                                        <span key={type} className="text-xs">
+                                          {type.split('/')[1].toUpperCase()}
+                                          {idx < childQuestion.allowedAttachmentContentTypes!.length - 1 && ', '}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50">
+                                  <input
+                                    type="file"
+                                    id={`file-upload-child-${childQuestion.id}`}
+                                    accept={childQuestion.allowedAttachmentContentTypes?.join(',')}
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        if (file.size > 5 * 1024 * 1024) {
+                                          alert('Dosya boyutu 5MB\'dan büyük olamaz.');
+                                          e.target.value = '';
+                                          return;
+                                        }
+                                        try {
+                                          const reader = new FileReader();
+                                          reader.onload = () => {
+                                            const base64 = (reader.result as string).split(',')[1];
+                                            handleAnswerChange(childQuestion.id, {
+                                              fileName: file.name,
+                                              contentType: file.type,
+                                              base64Content: base64,
+                                            });
+                                          };
+                                          reader.onerror = () => {
+                                            alert('Dosya okunurken bir hata oluştu. Lütfen tekrar deneyin.');
+                                            e.target.value = '';
+                                          };
+                                          reader.readAsDataURL(file);
+                                        } catch {
+                                          alert('Dosya işlenirken bir hata oluştu. Lütfen tekrar deneyin.');
+                                          e.target.value = '';
+                                        }
+                                      }
+                                    }}
+                                    className="hidden"
+                                  />
+                                  <label
+                                    htmlFor={`file-upload-child-${childQuestion.id}`}
+                                    className="cursor-pointer"
+                                  >
+                                    <div className="flex flex-col items-center">
+                                      <svg
+                                        className="w-10 h-10 text-slate-400 mb-2"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                        />
+                                      </svg>
+                                      {answers[childQuestion.id] ? (
+                                        <div className="space-y-1">
+                                          <p className="text-sm font-medium text-green-600">
+                                            Dosya yüklendi
+                                          </p>
+                                          <p className="text-xs text-slate-600">
+                                            {answers[childQuestion.id].fileName}
+                                          </p>
+                                          <p className="text-xs text-blue-600 hover:text-blue-700">
+                                            Farklı bir dosya seçmek için tıklayın
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-1">
+                                          <p className="text-sm font-medium text-slate-700">
+                                            Dosya seçmek için tıklayın
+                                          </p>
+                                          <p className="text-xs text-slate-500">
+                                            Maksimum dosya boyutu: 5 MB
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </label>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}

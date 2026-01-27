@@ -1,13 +1,23 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { logError } from './errors';
 
+function toLocalISOString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
 function serializeDates(obj: any): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
 
   if (obj instanceof Date) {
-    return obj.toISOString();
+    return toLocalISOString(obj);
   }
 
   if (Array.isArray(obj)) {
@@ -109,7 +119,9 @@ const refreshSession = async () => {
 
 apiClient.interceptors.response.use(
   (response) => {
-
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
     if (response.data) {
       response.data = deserializeDates(response.data);
     }

@@ -1,5 +1,28 @@
 export type AccessType = 'Internal' | 'Public';
 
+export type TextTemplateType = 'Intro' | 'Consent' | 'Outro';
+
+export interface TextTemplateDto {
+  id: number;
+  title: string;
+  content: string;
+  type: TextTemplateType;
+  departmentId: number;
+  createDate: Date;
+}
+
+export interface CreateTextTemplateRequest {
+  title: string;
+  content: string;
+  type: TextTemplateType;
+}
+
+export interface UpdateTextTemplateRequest {
+  title: string;
+  content: string;
+  type: TextTemplateType;
+}
+
 export type QuestionType = 'SingleSelect' | 'MultiSelect' | 'OpenText' | 'FileUpload' | 'Conditional' | 'Matrix';
 
 export interface LoginRequest {

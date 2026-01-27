@@ -3,9 +3,16 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
-import { useSurveys, usePublishSurvey, useDuplicateSurvey } from '@/src/features/survey/hooks';
+import { useSurveys, usePublishSurvey, useDuplicateSurvey, useDeleteSurvey } from '@/src/features/survey/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/src/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/src/components/ui/dropdown-menu';
 import { Label } from '@/src/components/ui/label';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import { DataTable } from '@/src/components/ui/data-table';
@@ -41,12 +48,16 @@ export default function SurveysPage() {
   const { data: surveys, isLoading, error } = useSurveys();
   const publishSurvey = usePublishSurvey();
   const duplicateSurvey = useDuplicateSurvey();
+  const deleteSurvey = useDeleteSurvey();
 
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [selectedSurveyId, setSelectedSurveyId] = useState<number | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteSurveyId, setDeleteSurveyId] = useState<number | null>(null);
+  const [deleteSurveyTitle, setDeleteSurveyTitle] = useState('');
 
   const handlePublishClick = (surveyId: number) => {
     setSelectedSurveyId(surveyId);
@@ -84,6 +95,24 @@ export default function SurveysPage() {
   const handleDuplicate = async (surveyId: number) => {
     try {
       await duplicateSurvey.mutateAsync(surveyId);
+    } catch {
+      // Error is handled by the hook
+    }
+  };
+
+  const handleDeleteClick = (survey: SurveyListItemDto) => {
+    setDeleteSurveyId(survey.id);
+    setDeleteSurveyTitle(survey.title);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteSurveyId) return;
+    try {
+      await deleteSurvey.mutateAsync(deleteSurveyId);
+      setDeleteDialogOpen(false);
+      setDeleteSurveyId(null);
+      setDeleteSurveyTitle('');
     } catch {
       // Error is handled by the hook
     }
@@ -211,47 +240,62 @@ export default function SurveysPage() {
           const isDraft = status.value === 'draft';
 
           return (
-            <div className="flex flex-wrap gap-2">
-              {isDraft && (
-                <Button size="sm" onClick={() => handlePublishClick(survey.id)}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                   </svg>
-                  Yayınla
+                  Seçenekler
                 </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={() => router.push(`/surveys/${survey.id}/edit`)}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                {isDraft ? 'Düzenle' : 'Metinleri Düzenle'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleDuplicate(survey.id)} disabled={duplicateSurvey.isPending}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                Çoğalt
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleCopySurveyLink(survey)}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                Bağlantı
-              </Button>
-              {!isDraft && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/surveys/${survey.id}/report`)}
-                  className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isDraft && (
+                  <DropdownMenuItem onClick={() => handlePublishClick(survey.id)}>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Yayınla
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => router.push(`/surveys/${survey.id}/edit`)}>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {isDraft ? 'Düzenle' : 'Metinleri Düzenle'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDuplicate(survey.id)} disabled={duplicateSurvey.isPending}>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Çoğalt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleCopySurveyLink(survey)}>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Bağlantıyı Kopyala
+                </DropdownMenuItem>
+                {!isDraft && (
+                  <DropdownMenuItem onClick={() => router.push(`/surveys/${survey.id}/report`)}>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Rapor
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleDeleteClick(survey)}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
                 >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  Rapor
-                </Button>
-              )}
-            </div>
+                  Sil
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         },
       },
@@ -347,6 +391,49 @@ export default function SurveysPage() {
           enableColumnVisibility={false}
         />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              Anketi Sil
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">&quot;{deleteSurveyTitle}&quot;</strong> anketini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                İptal
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteSurvey.isPending}
+              >
+                {deleteSurvey.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Siliniyor...
+                  </div>
+                ) : (
+                  'Sil'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Publish Dialog */}
       <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
