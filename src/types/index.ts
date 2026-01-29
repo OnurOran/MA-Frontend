@@ -1,4 +1,8 @@
-export type AccessType = 'Internal' | 'Public';
+export type AccessType = 'Internal' | 'Public' | 'InvitationOnly';
+
+export type DeliveryMethod = 'Email' | 'Sms';
+
+export type InvitationStatus = 'Pending' | 'Sent' | 'Viewed' | 'Completed' | 'Cancelled';
 
 export type TextTemplateType = 'Intro' | 'Consent' | 'Outro';
 
@@ -380,4 +384,53 @@ export interface PaginatedResponse<T> {
   pageSize: number;
   currentPage: number;
   totalPages: number;
+}
+
+export interface InvitationDto {
+  id: number;
+  surveyId: number;
+  token: string;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone?: string | null;
+  deliveryMethod: DeliveryMethod;
+  status: InvitationStatus;
+  sentAt?: Date | null;
+  viewedAt?: Date | null;
+  completedAt?: Date | null;
+  participationId?: number | null;
+  createDate: Date;
+}
+
+export interface CreateInvitationRequest {
+  surveyId: number;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone?: string | null;
+  deliveryMethod: DeliveryMethod;
+}
+
+export interface SendInvitationsRequest {
+  baseUrl: string;
+}
+
+export interface TokenSurveyDto {
+  surveyId: number;
+  surveyNumber: number;
+  slug: string;
+  title: string;
+  description?: string | null;
+  introText?: string | null;
+  consentText?: string | null;
+  outroText?: string | null;
+  firstName: string;
+  lastName: string;
+  hasParticipated: boolean;
+  isCompleted: boolean;
+  completedAt?: Date | null;
+  participationId?: number | null;
+  questions: QuestionDto[];
+  attachment?: AttachmentMetadata | null;
 }

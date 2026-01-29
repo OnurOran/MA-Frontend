@@ -174,11 +174,14 @@ export default function SurveysPage() {
         cell: ({ getValue }) => {
           const value = getValue<string>();
           const isInternal = value === 'Internal';
+          const isInvitationOnly = value === 'InvitationOnly';
           return (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border ${
                 isInternal
                   ? 'bg-violet-50 text-violet-700 border-violet-200'
+                  : isInvitationOnly
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
                   : 'bg-orange-50 text-orange-700 border-orange-200'
               }`}
             >
@@ -186,12 +189,16 @@ export default function SurveysPage() {
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
+              ) : isInvitationOnly ? (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
               ) : (
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
-              {isInternal ? 'Dahili' : 'Halka Açık'}
+              {isInternal ? 'Dahili' : isInvitationOnly ? 'Davetiye' : 'Halka Açık'}
             </span>
           );
         },
@@ -276,6 +283,14 @@ export default function SurveysPage() {
                   </svg>
                   Bağlantıyı Kopyala
                 </DropdownMenuItem>
+                {survey.accessType === 'InvitationOnly' && (
+                  <DropdownMenuItem onClick={() => router.push(`/surveys/${survey.id}/invitations`)}>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Davetiyeleri Yönet
+                  </DropdownMenuItem>
+                )}
                 {!isDraft && (
                   <DropdownMenuItem onClick={() => router.push(`/surveys/${survey.id}/report`)}>
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -383,6 +398,7 @@ export default function SurveysPage() {
               options: [
                 { value: 'Internal', label: 'Dahili' },
                 { value: 'Public', label: 'Halka Açık' },
+                { value: 'InvitationOnly', label: 'Davetiye' },
               ],
             },
           ]}

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AttachmentUpload } from '../AttachmentUpload';
 import { AttachmentData } from '../../question-types/types';
 import { TextTemplateSelectModal } from '@/src/features/textTemplate/components/TextTemplateSelectModal';
-import { TextTemplateType } from '@/src/types';
+import { AccessType, TextTemplateType } from '@/src/types';
 
 interface SurveyBasicInfoProps {
   title: string;
@@ -16,14 +16,14 @@ interface SurveyBasicInfoProps {
   introText?: string;
   consentText?: string;
   outroText?: string;
-  accessType: 'Internal' | 'Public';
+  accessType: AccessType;
   attachment: AttachmentData | null;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onIntroTextChange?: (introText: string) => void;
   onConsentTextChange?: (consentText: string) => void;
   onOutroTextChange?: (outroText: string) => void;
-  onAccessTypeChange: (accessType: 'Internal' | 'Public') => void;
+  onAccessTypeChange: (accessType: AccessType) => void;
   onAttachmentChange: (attachment: AttachmentData | null) => void;
 }
 
@@ -165,8 +165,15 @@ export function SurveyBasicInfo({
             <SelectContent className="bg-white">
               <SelectItem value="Internal">Dahili (Sadece Çalışanlar)</SelectItem>
               <SelectItem value="Public">Halka Açık</SelectItem>
+              <SelectItem value="InvitationOnly">Davetiye Bazlı</SelectItem>
             </SelectContent>
           </Select>
+          {accessType === 'InvitationOnly' && (
+            <p className="text-sm text-blue-600 mt-2">
+              Davetiye bazlı anketlerde katılımcılar size özel bağlantılar ile ankete erişebilir.
+              Anket yayınlandıktan sonra &quot;Davetiyeleri Yönet&quot; menüsünden davetlileri ekleyebilirsiniz.
+            </p>
+          )}
         </div>
 
         <div>

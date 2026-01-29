@@ -1,4 +1,4 @@
-import { QuestionType } from '@/src/types';
+import { AccessType, QuestionType } from '@/src/types';
 
 export interface AttachmentData {
   fileName: string;
@@ -47,7 +47,7 @@ export interface SurveyFormData {
   introText?: string;
   consentText?: string;
   outroText?: string;
-  accessType: 'Internal' | 'Public';
+  accessType: AccessType;
   attachment: AttachmentData | null;
   questions: QuestionFormData[];
 }
