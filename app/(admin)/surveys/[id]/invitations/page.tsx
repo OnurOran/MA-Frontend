@@ -65,8 +65,32 @@ export default function InvitationsPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+90');
   const [phone, setPhone] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('Email');
+
+  const countryCodes = [
+    { code: '+90', country: 'Türkiye', flag: '🇹🇷' },
+    { code: '+1', country: 'ABD/Kanada', flag: '🇺🇸' },
+    { code: '+44', country: 'İngiltere', flag: '🇬🇧' },
+    { code: '+49', country: 'Almanya', flag: '🇩🇪' },
+    { code: '+33', country: 'Fransa', flag: '🇫🇷' },
+    { code: '+31', country: 'Hollanda', flag: '🇳🇱' },
+    { code: '+39', country: 'İtalya', flag: '🇮🇹' },
+    { code: '+34', country: 'İspanya', flag: '🇪🇸' },
+    { code: '+7', country: 'Rusya', flag: '🇷🇺' },
+    { code: '+86', country: 'Çin', flag: '🇨🇳' },
+    { code: '+81', country: 'Japonya', flag: '🇯🇵' },
+    { code: '+82', country: 'Güney Kore', flag: '🇰🇷' },
+    { code: '+91', country: 'Hindistan', flag: '🇮🇳' },
+    { code: '+971', country: 'BAE', flag: '🇦🇪' },
+    { code: '+966', country: 'Suudi Arabistan', flag: '🇸🇦' },
+    { code: '+20', country: 'Mısır', flag: '🇪🇬' },
+    { code: '+30', country: 'Yunanistan', flag: '🇬🇷' },
+    { code: '+359', country: 'Bulgaristan', flag: '🇧🇬' },
+    { code: '+994', country: 'Azerbaycan', flag: '🇦🇿' },
+    { code: '+995', country: 'Gürcistan', flag: '🇬🇪' },
+  ];
 
   const handleCreateInvitation = async () => {
     if (!firstName.trim() || !lastName.trim()) {
@@ -85,12 +109,13 @@ export default function InvitationsPage() {
     }
 
     try {
+      const fullPhone = deliveryMethod === 'Sms' ? `${countryCode}${phone.trim()}` : null;
       await createInvitation.mutateAsync({
         surveyId,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim() || null,
-        phone: phone.trim() || null,
+        phone: fullPhone,
         deliveryMethod,
       });
       setCreateDialogOpen(false);
@@ -104,6 +129,7 @@ export default function InvitationsPage() {
     setFirstName('');
     setLastName('');
     setEmail('');
+    setCountryCode('+90');
     setPhone('');
     setDeliveryMethod('Email');
   };
@@ -420,7 +446,8 @@ export default function InvitationsPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="Email">Email</SelectItem>
-                  <SelectItem value="Sms">SMS</SelectItem>
+                  {/* SMS temporarily disabled due to provider issues */}
+                  {/* <SelectItem value="Sms">SMS</SelectItem> */}
                 </SelectContent>
               </Select>
             </div>
@@ -441,13 +468,28 @@ export default function InvitationsPage() {
             {deliveryMethod === 'Sms' && (
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefon *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="5551234567"
-                />
+                <div className="flex gap-2">
+                  <Select value={countryCode} onValueChange={setCountryCode}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white max-h-[300px]">
+                      {countryCodes.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.flag} {c.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="5551234567"
+                    className="flex-1"
+                  />
+                </div>
               </div>
             )}
 

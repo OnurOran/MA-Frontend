@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSurveyReport, useParticipantResponse } from '@/src/features/survey/hooks';
 import { Button } from '@/src/components/ui/button';
@@ -8,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/ca
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/src/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/src/components/ui/popover';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { apiClient } from '@/src/lib/api';
 import type { QuestionReportDto, OptionResultDto, ParticipantResponseDto, MatrixRowResultDto } from '@/src/types';
 import { Check, ChevronsUpDown, ChevronDown, ChevronUp } from 'lucide-react';
@@ -96,17 +94,14 @@ export default function SurveyReportPage() {
   const params = useParams();
   const router = useRouter();
   const surveyId = parseInt(params?.id as string);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const [includePartialResponses, setIncludePartialResponses] = useState(false);
   const { data: report, isLoading, error } = useSurveyReport(surveyId, includePartialResponses);
   const [selectedParticipantId, setSelectedParticipantId] = useState<number | null>(null);
   const [selectedParticipantName, setSelectedParticipantName] = useState<string>('');
   const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantId || 0);
-  const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
-  const [forceExpandAll, setForceExpandAll] = useState(false);
 
   const handleParticipantSelect = (participationId: number | null, participantName?: string | null) => {
     if (!participationId) {
@@ -162,167 +157,6 @@ export default function SurveyReportPage() {
     }
   };
 
-  const handleExportPDF = async () => {
-    if (!reportRef.current || !report) return;
-
-    setExportingPDF(true);
-    setForceExpandAll(true);
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const pdfStyleOverrideCSS = `
-      * {
-        color: inherit !important;
-        background-color: transparent !important;
-        border-color: rgb(203, 213, 225) !important;
-      }
-      body, .bg-white, [class*="bg-white"] {
-        background-color: rgb(255, 255, 255) !important;
-      }
-      .bg-slate-50, [class*="bg-slate-50"] {
-        background-color: rgb(248, 250, 252) !important;
-      }
-      .bg-slate-100, [class*="bg-slate-100"] {
-        background-color: rgb(241, 245, 249) !important;
-      }
-      .bg-blue-50, [class*="bg-blue-50"] {
-        background-color: rgb(239, 246, 255) !important;
-      }
-      .text-slate-600, [class*="text-slate-600"] {
-        color: rgb(71, 85, 105) !important;
-      }
-      .text-slate-700, [class*="text-slate-700"] {
-        color: rgb(51, 65, 85) !important;
-      }
-      .text-slate-800, [class*="text-slate-800"] {
-        color: rgb(30, 41, 59) !important;
-      }
-      .text-slate-900, [class*="text-slate-900"] {
-        color: rgb(15, 23, 42) !important;
-      }
-      .text-blue-900, [class*="text-blue-900"] {
-        color: rgb(30, 58, 138) !important;
-      }
-      .text-green-600, [class*="text-green-600"] {
-        color: rgb(22, 163, 74) !important;
-      }
-      .text-blue-600, [class*="text-blue-600"] {
-        color: rgb(37, 99, 235) !important;
-      }
-      .border-slate-200, [class*="border-slate-200"] {
-        border-color: rgb(226, 232, 240) !important;
-      }
-      .border-blue-100, [class*="border-blue-100"] {
-        border-color: rgb(219, 234, 254) !important;
-      }
-      .border-blue-200, [class*="border-blue-200"] {
-        border-color: rgb(191, 219, 254) !important;
-      }
-    `;
-
-    try {
-
-      const images = reportRef.current.querySelectorAll('img');
-      const imagePromises = Array.from(images).map((img) => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          setTimeout(resolve, 3000);
-        });
-      });
-
-      await Promise.all(imagePromises);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15;
-
-      pdf.setFontSize(18);
-      pdf.text(report.title, margin, 20);
-      pdf.setFontSize(11);
-      const subtitle = selectedParticipantId
-        ? `Katılımcı: ${selectedParticipantName}`
-        : `Toplam Katılım: ${report.totalParticipations} | Tamamlanan: ${report.completedParticipations} (${report.completionRate.toFixed(1)}%)`;
-      pdf.text(subtitle, margin, 28);
-
-      const pageContentHeight = pageHeight - 2 * margin;
-      let cursorY = margin;
-      const gap = 4;
-
-      const blocks = Array.from(reportRef.current.querySelectorAll<HTMLElement>('[data-pdf-block]'));
-
-      for (const block of blocks) {
-        const canvas = await html2canvas(block, {
-          scale: 1.5,
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          imageTimeout: 0,
-          backgroundColor: '#ffffff',
-          onclone: (clonedDoc) => {
-            const style = clonedDoc.createElement('style');
-            style.textContent = pdfStyleOverrideCSS;
-            clonedDoc.head.appendChild(style);
-          },
-        });
-
-        const imgWidth = pageWidth - 2 * margin;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        if (imgHeight <= pageContentHeight && cursorY + imgHeight > pageHeight - margin) {
-          pdf.addPage();
-          cursorY = margin;
-        }
-
-        if (imgHeight > pageContentHeight) {
-          const pxPerMm = canvas.width / imgWidth;
-          const slicePxHeight = Math.floor(pageContentHeight * pxPerMm);
-          let offsetPx = 0;
-
-          while (offsetPx < canvas.height) {
-            const remainingPx = canvas.height - offsetPx;
-            const currentSlicePx = Math.min(slicePxHeight, remainingPx);
-            const sliceCanvas = document.createElement('canvas');
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = currentSlicePx;
-            const sliceCtx = sliceCanvas.getContext('2d');
-            if (sliceCtx) {
-              sliceCtx.drawImage(canvas, 0, -offsetPx);
-            }
-
-            const sliceData = sliceCanvas.toDataURL('image/png');
-            const sliceHeightMm = currentSlicePx / pxPerMm;
-
-            if (cursorY + sliceHeightMm > pageHeight - margin) {
-              pdf.addPage();
-              cursorY = margin;
-            }
-
-            pdf.addImage(sliceData, 'PNG', margin, cursorY, imgWidth, sliceHeightMm);
-            cursorY += sliceHeightMm + gap;
-            offsetPx += currentSlicePx;
-          }
-        } else {
-
-          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, cursorY, imgWidth, imgHeight);
-          cursorY += imgHeight + gap;
-        }
-      }
-
-      const filename = selectedParticipantId
-        ? `${report.title}_${selectedParticipantName}.pdf`
-        : `${report.title}.pdf`;
-      pdf.save(filename);
-    } catch (err) {
-      console.error('PDF export error:', err);
-      alert('PDF oluşturulurken bir hata oluştu: ' + (err as Error).message);
-    } finally {
-      setForceExpandAll(false);
-      setExportingPDF(false);
-    }
-  };
 
   const handleExportExcel = async () => {
     if (!report) return;
@@ -395,21 +229,13 @@ export default function SurveyReportPage() {
               >
                 {exportingExcel ? 'Excel Oluşturuluyor...' : 'Excel İndir'}
               </Button>
-              <Button
-                onClick={handleExportPDF}
-                disabled={exportingPDF}
-                style={{ backgroundColor: '#0055a5' }}
-                className="hover:opacity-90"
-              >
-                {exportingPDF ? 'PDF Oluşturuluyor...' : 'PDF İndir'}
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-6 py-6 w-full">
-        <div className="space-y-6" ref={reportRef}>
+        <div className="space-y-6">
           {}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-pdf-block>
             <Card>
@@ -649,7 +475,6 @@ export default function SurveyReportPage() {
               onFileDownload={handleFileDownload}
               onSurveyorFileDownload={handleSurveyorFileDownload}
               participantResponse={isIndividualView ? participantResponse : undefined}
-              forceExpandAll={forceExpandAll}
             />
           ))}
         </div>
@@ -719,19 +544,16 @@ function QuestionResultCard({
   onFileDownload,
   onSurveyorFileDownload,
   participantResponse,
-  forceExpandAll
 }: {
   question: QuestionReportDto;
   index: number;
   onFileDownload: (attachmentId: number, fileName: string) => void;
   onSurveyorFileDownload: (attachmentId: number, fileName: string) => void;
   participantResponse?: ParticipantResponseDto;
-  forceExpandAll?: boolean;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [collapsed, setCollapsed] = useState(false);
-  const isCollapsed = forceExpandAll ? false : collapsed;
   const selectedParticipantName = participantResponse?.participantName ?? undefined;
 
   const participantAnswer = participantResponse?.answers.find(a => a.questionId === question.questionId);
@@ -835,7 +657,7 @@ function QuestionResultCard({
             onClick={() => setCollapsed(prev => !prev)}
             className="shrink-0"
           >
-            {isCollapsed ? (
+            {collapsed ? (
               <>
                 <ChevronDown className="h-4 w-4 mr-1" /> Genişlet
               </>
@@ -848,7 +670,7 @@ function QuestionResultCard({
         </div>
       </CardHeader>
       <CardContent>
-        {isCollapsed ? (
+        {collapsed ? (
           <div className="text-sm text-slate-400 italic text-center py-2">İçeriği görmek için genişletin</div>
         ) : (
           <>
