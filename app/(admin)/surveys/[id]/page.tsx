@@ -164,6 +164,16 @@ export default function SurveyDetailPage() {
           <Button variant="outline" onClick={() => router.push(`/surveys/${surveyId}/edit`)}>
             {isDraft ? 'Düzenle' : 'Metinleri Düzenle'}
           </Button>
+          {!isDraft && survey.accessType === 'InvitationOnly' && (
+            <Button variant="outline" onClick={() => router.push(`/surveys/${surveyId}/invitations`)}>
+              Davetiyeler
+            </Button>
+          )}
+          {!isDraft && (
+            <Button variant="outline" onClick={() => router.push(`/surveys/${surveyId}/report`)}>
+              Rapor
+            </Button>
+          )}
           <Button variant="outline" onClick={() => router.push('/surveys')}>
             Geri
           </Button>

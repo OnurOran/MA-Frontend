@@ -9,8 +9,10 @@ import {
   useCreateInvitation,
   useImportInvitations,
   useSendInvitations,
+  useResendInvitations,
   useCancelInvitation,
 } from '@/src/features/invitation/hooks';
+import apiClient from '@/src/lib/api';
 import { Button } from '@/src/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/src/components/ui/dialog';
 import { Input } from '@/src/components/ui/input';
@@ -59,6 +61,7 @@ export default function InvitationsPage() {
   const createInvitation = useCreateInvitation();
   const importInvitations = useImportInvitations();
   const sendInvitations = useSendInvitations();
+  const resendInvitations = useResendInvitations();
   const cancelInvitation = useCancelInvitation();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -155,6 +158,33 @@ export default function InvitationsPage() {
       await sendInvitations.mutateAsync({ surveyId, baseUrl });
     } catch {
       // Error handled by hook
+    }
+  };
+
+  const handleResendAll = async () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    try {
+      await resendInvitations.mutateAsync({ surveyId, baseUrl });
+    } catch {
+      // Error handled by hook
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await apiClient.get('/invitations/template', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'davetiye_sablonu.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Şablon indirilemedi');
     }
   };
 
@@ -274,6 +304,8 @@ export default function InvitationsPage() {
   );
 
   const pendingCount = invitations?.filter(i => i.status === 'Pending').length ?? 0;
+  const sentCount = invitations?.filter(i => i.status === 'Sent').length ?? 0;
+  const resendableCount = pendingCount + sentCount;
 
   if (surveyLoading || invitationsLoading) {
     return (
@@ -306,8 +338,25 @@ export default function InvitationsPage() {
     );
   }
 
+  const isDraft = !survey.startDate && !survey.endDate;
+
   return (
     <div className="space-y-6">
+      {/* Draft Warning */}
+      {isDraft && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p className="font-medium text-amber-800">Anket henüz yayınlanmadı</p>
+              <p className="text-sm text-amber-700">Davetiye göndermek için önce anketi yayınlamanız gerekmektedir.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl border border-border/50 p-6">
         <div className="flex items-center justify-between">
@@ -332,6 +381,15 @@ export default function InvitationsPage() {
             />
             <Button
               variant="outline"
+              onClick={handleDownloadTemplate}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Şablon İndir
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => fileInputRef.current?.click()}
               disabled={importInvitations.isPending}
             >
@@ -340,17 +398,30 @@ export default function InvitationsPage() {
               </svg>
               Excel İçe Aktar
             </Button>
-            {pendingCount > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleSendAll}
-                disabled={sendInvitations.isPending}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Bekleyenleri Gönder ({pendingCount})
-              </Button>
+            {!isDraft && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleSendAll}
+                  disabled={sendInvitations.isPending || pendingCount === 0}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  {pendingCount > 0 ? `Bekleyenleri Gönder (${pendingCount})` : 'Bekleyen Yok'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleResendAll}
+                  disabled={resendInvitations.isPending || resendableCount === 0}
+                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Tümünü Tekrar Gönder ({resendableCount})
+                </Button>
+              </>
             )}
             <Button onClick={() => setCreateDialogOpen(true)}>
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -446,8 +517,7 @@ export default function InvitationsPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="Email">Email</SelectItem>
-                  {/* SMS temporarily disabled due to provider issues */}
-                  {/* <SelectItem value="Sms">SMS</SelectItem> */}
+                  <SelectItem value="Sms">SMS</SelectItem>
                 </SelectContent>
               </Select>
             </div>
