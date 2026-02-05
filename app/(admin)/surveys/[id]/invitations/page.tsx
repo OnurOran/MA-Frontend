@@ -359,19 +359,19 @@ export default function InvitationsPage() {
 
       {/* Header */}
       <div className="bg-white rounded-xl border border-border/50 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Button>
-              <h1 className="text-2xl font-bold text-foreground">Davetiyeler</h1>
-            </div>
-            <p className="text-muted-foreground mt-1 ml-10">{survey.title}</p>
-          </div>
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Davetiyeler</h1>
+              <p className="text-muted-foreground mt-1">{survey.title}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -423,7 +423,7 @@ export default function InvitationsPage() {
                 </Button>
               </>
             )}
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button onClick={() => setCreateDialogOpen(true)} className="ml-auto">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -434,7 +434,7 @@ export default function InvitationsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {['Pending', 'Sent', 'Viewed', 'Completed', 'Cancelled'].map((status) => {
           const count = invitations?.filter(i => i.status === status).length ?? 0;
           const badge = getStatusBadge(status);

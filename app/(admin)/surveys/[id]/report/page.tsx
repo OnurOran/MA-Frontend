@@ -386,7 +386,7 @@ export default function SurveyReportPage() {
           )}
 
           {}
-          {report.accessType === 'Internal' && report.participants.length > 0 && (
+          {(report.accessType === 'Internal' || report.accessType === 'InvitationOnly') && report.participants.length > 0 && (
             <Card className="bg-white" data-pdf-block>
               <CardHeader>
                 <CardTitle>Katılımcı Seçimi</CardTitle>
