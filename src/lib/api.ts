@@ -20,6 +20,10 @@ function serializeDates(obj: any): any {
     return toLocalISOString(obj);
   }
 
+  if (obj instanceof FormData) {
+    return obj;
+  }
+
   if (Array.isArray(obj)) {
     return obj.map(serializeDates);
   }

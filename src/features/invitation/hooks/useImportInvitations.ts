@@ -14,11 +14,6 @@ export function useImportInvitations() {
       const response = await apiClient.post<{ importedCount: number }>(
         `/invitations/surveys/${surveyId}/import`,
         formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
       );
       return response.data;
     },
