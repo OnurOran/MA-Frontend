@@ -13,7 +13,7 @@ export default function PublicLayout({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-border/50 shadow-sm">
+      {/*<header className="bg-white border-b border-border/50 shadow-sm">
         <div className="h-1 bg-gradient-metro-light"></div>
         <div className="container mx-auto px-4 py-5">
           <div className="flex items-center gap-4">
@@ -29,7 +29,7 @@ export default function PublicLayout({
             </div>
           </div>
         </div>
-      </header>
+      </header>*\}
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl animate-fade-in">
